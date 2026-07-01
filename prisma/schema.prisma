@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  VOLUNTEER
+  NGO
+  ADMIN
+}
+
+model User {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  password       String
+  role           Role      @default(VOLUNTEER)
+  
+  // Platform Status
+  isBanned       Boolean   @default(false)
+  isVerified     Boolean   @default(false)
+  walletBalance  Float     @default(0.0)
+  rating         Float     @default(5.0)
+
+  // Auth & Recovery
+  resetOtp       String?
+  resetOtpExpiry DateTime?
+
+  // --- KYC, Contact & Address Fields ---
+  phone          String?
+  dob            String?
+  aadharNumber   String?   @unique
+  address        String?
+  city           String?
+  state          String?
+  pincode        String?   
+  bio            String?
+
+  // --- Specific Role Fields ---
+  bloodGroup     String?   // Volunteer Specific
+  upiId          String?   // For Wallet Payouts
+  ngoDarpanId    String?   @unique // NGO Specific
+
+  // Relationships
+  eventsCreated  Requirement[] @relation("NGOCreator")
+  applications   Application[]
+  complaints     Complaint[]
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  profileImage  String?   @db.Text
+}
+
+model Requirement {
+  id               String   @id @default(uuid())
+  title            String
+  description      String
+  location         String
+  mapsLink         String?
+  date             DateTime
+  time             String
+  amount           Float    @default(0.0)
+  status           String   @default("OPEN") // OPEN, COMPLETED, CANCELLED
+
+  volunteersNeeded Int      @default(1)
+  paymentMode      String   @default("WALLET") // WALLET, CASH, UPI
+
+  creatorId        String
+  creator          User     @relation("NGOCreator", fields: [creatorId], references: [id])
+
+  applications     Application[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Application {
+  id            String  @id @default(uuid())
+  status        String  @default("PENDING") // PENDING, APPROVED, REJECTED, COMPLETED
+  qrCode        String? @unique
+
+  volunteerId   String
+  volunteer     User    @relation(fields: [volunteerId], references: [id])
+
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id])
+
+  rating        Int?     // 1–5 stars after completion
+  paymentStatus String   @default("UNPAID") // UNPAID, PENDING, PAID
+
+  createdAt     DateTime @default(now())
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  applicationId String
+  senderId      String
+  senderName    String
+  text          String
+  attachment    String?  @db.Text
+  createdAt     DateTime @default(now())
+}
+
+model Complaint {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  status      String   @default("OPEN") // OPEN or RESOLVED
+  adminReply  String?  // The optional reply from the admin
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now())
+}
