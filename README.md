@@ -35,7 +35,7 @@ The platform is backed by a highly disciplined relational structure. Below is a 
 * **User (1:N) Application:** Volunteers hold historical participation and rating profiles.
 * **Requirement (1:N) Application:** Aggregated transactional table resolving the junction network between events and candidate applications.
 
-```prisma
+prisma
 // Sample Core Relational Model Schema
 model Application {
   id            String   @id @default(uuid())
